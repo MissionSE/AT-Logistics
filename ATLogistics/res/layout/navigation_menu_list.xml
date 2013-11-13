@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:textAppearance="@android:style/TextAppearance.Large"
+        android:textAlignment="center"
+        android:textAllCaps="true"
+        android:padding="20dp"
+        android:text="@string/navigation_menu_header" />
+
+	<ListView
+	    android:id="@android:id/list"
+	    android:layout_width="match_parent"
+	    android:layout_height="match_parent"
+	    android:paddingLeft="20dp"
+	    android:paddingRight="20dp" >
+	</ListView>
+</LinearLayout>

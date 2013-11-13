@@ -1,0 +1,8 @@
+<resources>
+    
+    <!-- Menu values -->
+    <dimen name="navigation_menu_width">250dp</dimen>
+    <dimen name="filter_menu_width">250dp</dimen>
+    <dimen name="menu_shadow_width">15dp</dimen>
+
+</resources>

@@ -1,0 +1,1 @@
+SlidingMenu can be found at https://github.com/jfeinstein10/SlidingMenu.

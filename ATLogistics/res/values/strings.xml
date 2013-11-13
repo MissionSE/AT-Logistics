@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">AT Logistics</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- Menu strings -->
+    <string name="navigation_menu_header">Main Menu</string>
+    <string name="filter_menu_header">Filters</string>
+    <string name="filter_menu_showall">Show All</string>
+    <string name="filter_menu_hideall">Hide All</string>
+    <string name="filter_icon_content_description">Icon for filter menu entry</string>
+    <string name="identify_resource">Resources</string>
+
+</resources>
