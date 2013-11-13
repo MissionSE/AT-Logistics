@@ -1,0 +1,22 @@
+# Blender MTL File: 'None'
+# Material Count: 2
+
+newmtl Metal_Seamed
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.370196 0.373334 0.360784
+Ks 0.165000 0.165000 0.165000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd metal_seamed.jpg
+
+newmtl Textile_Leaves_Green
+Ns 96.078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.307451 0.257255 0.156862
+Ks 0.165000 0.165000 0.165000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd textile_leaves_green.jpg
