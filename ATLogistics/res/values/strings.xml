@@ -11,5 +11,8 @@
     <string name="filter_menu_hideall">Hide All</string>
     <string name="filter_icon_content_description">Icon for filter menu entry</string>
     <string name="identify_resource">Resources</string>
+    <string name="helicopter_text">MH-60S Sea Hawk Helicopter\nFuel: 100%</string>
+    <string name="ammunition_text">Ammunition\nQuantity: 10 tons (60%)</string>
+    <string name="cargoship_text">Ammunition\nQuantity: 100 rounds\nFuel: 10000 tons</string>
 
 </resources>

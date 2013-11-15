@@ -1,6 +1,11 @@
 package com.missionse.atlogistics.maps;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+
 import android.app.Fragment;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
@@ -24,12 +29,21 @@ import com.google.android.gms.maps.GoogleMap.OnMyLocationButtonClickListener;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.Polyline;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.missionse.atlogistics.ATLogistics;
 import com.missionse.atlogistics.R;
+import com.missionse.atlogistics.resources.Resource;
+import com.missionse.atlogistics.resources.ResourceChangeListener;
+import com.missionse.atlogistics.resources.ResourceManager;
+import com.missionse.atlogistics.resources.ResourceType;
 
 public class RightMapsFragment extends Fragment implements ConnectionCallbacks, OnConnectionFailedListener,
-LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLongClickListener {
+		LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLongClickListener,
+		ResourceChangeListener {
 
-	private static final LatLng HOME = new LatLng(32.865240, -80.020439);
+	private static final LatLng HOME = new LatLng(11.05, 124.367);
 	private static final float HOME_BEARING = 27f;
 
 	private GoogleMap map;
@@ -37,11 +51,28 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 
 	private View view;
 
-	private static final LocationRequest REQUEST = LocationRequest.create().setInterval(5000)
-			.setFastestInterval(16) // 16ms = 60fps
+	private HashMap<Resource, ResourceMarker> markers;
+	private HashMap<ResourceType, Boolean> markerVisibilities;
+
+	private boolean isLoaded = false;
+
+	private Polyline waypoint1, waypoint2;
+	private boolean waypointsVisible = false;
+
+	private static final LocationRequest REQUEST = LocationRequest.create().setInterval(5000).setFastestInterval(16) // 16ms = 60fps
 			.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
 	private DualMapContainer mapContainer;
+
+	public RightMapsFragment() {
+		markers = new HashMap<Resource, ResourceMarker>();
+		markerVisibilities = new HashMap<ResourceType, Boolean>();
+
+		for (ResourceType resourceType : ResourceType.values()) {
+			markerVisibilities.put(resourceType, Boolean.TRUE);
+		}
+	}
+
 	public void setMapContainer(final DualMapContainer container) {
 		mapContainer = container;
 		mapContainer.setRightMap(this);
@@ -138,20 +169,59 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 			@Override
 			public void onMapLoaded() {
 				map.animateCamera(CameraUpdateFactory
-						.newCameraPosition(new CameraPosition(HOME, 17.5f, 0, HOME_BEARING)));
+						.newCameraPosition(new CameraPosition(HOME, 5.2f, 0, HOME_BEARING)));
+				isLoaded = true;
 			}
 		});
 		map.setOnCameraChangeListener(new OnCameraChangeListener() {
 			@Override
 			public void onCameraChange(final CameraPosition posRight) {
 				if (mapContainer.getLeftMap() != null) {
-						mapContainer.getLeftMap().animateCamera(CameraUpdateFactory.zoomTo(posRight.zoom - 3));
+					mapContainer.getLeftMap().animateCamera(CameraUpdateFactory.zoomTo(posRight.zoom - 1));
+
 				}
 				if (mapContainer.getLeft() != null) {
 					mapContainer.getLeft().drawZoomedViewPolygon();
 				}
 			}
 		});
+		map.setInfoWindowAdapter(new CustomInfoWindowAdapter(getActivity(), markers));
+
+		map.setOnInfoWindowClickListener(new GoogleMap.OnInfoWindowClickListener() {
+			@Override
+			public void onInfoWindowClick(final Marker marker) {
+				for (Entry<Resource, ResourceMarker> entry : markers.entrySet()) {
+					if (entry.getValue().getMarker().equals(marker)) {
+						((ATLogistics) getActivity()).onResourceClicked(entry.getKey());
+					}
+				}
+				for (Entry<Resource, ResourceMarker> entry : markers.entrySet()) {
+					if (entry.getValue().getMarker().equals(marker)) {
+						if (entry.getKey().getType().equals(ResourceType.HELO)) {
+							setWaypointVisibility(!waypointsVisible);
+						}
+					}
+				}
+			}
+		});
+
+		waypoint1 = map.addPolyline(new PolylineOptions().add(new LatLng(10.2017, 128.3524), new LatLng(13.6041, 123.0000))
+				.width(10)
+				.color(Color.BLUE));
+		waypoint2 = map.addPolyline(new PolylineOptions().add(new LatLng(13.6041, 123.0000), new LatLng(11.05, 124.367))
+				.width(10)
+				.color(Color.BLUE));
+		setWaypointVisibility(false);
+
+		ResourceManager.getInstance().addListener(this);
+	}
+
+	public void setWaypointVisibility(final boolean visible) {
+		if (waypoint1 != null && waypoint2 != null) {
+			waypoint1.setVisible(visible);
+			waypoint2.setVisible(visible);
+			waypointsVisible = visible;
+		}
 	}
 
 	@Override
@@ -161,5 +231,37 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 	@Override
 	public void onMapClick(final LatLng location) {
 		Log.e("RightMap", "onMapClick: " + location);
+	}
+
+	@Override
+	public void onResourcesChanged() {
+		for (Resource resource : ResourceManager.getInstance().getResources()) {
+			ResourceMarker marker = new ResourceMarker(map, resource, getActivity());
+			markers.put(resource, marker);
+		}
+	}
+
+	public void setResourceVisibility(final ResourceType resourceType, final boolean isChecked) {
+		markerVisibilities.put(resourceType, Boolean.valueOf(isChecked));
+		for (Map.Entry<Resource, ResourceMarker> entry : markers.entrySet()) {
+			Resource r = entry.getKey();
+			ResourceMarker m = entry.getValue();
+			if (r.getType() == resourceType) {
+				m.setVisible(isChecked);
+			}
+		}
+	}
+
+	public void showMarker(final int sendId) {
+		for (Entry<Resource, ResourceMarker> entry : markers.entrySet()) {
+			if (entry.getKey().getId() == sendId) {
+				entry.getValue().getMarker().showInfoWindow();
+				map.animateCamera(CameraUpdateFactory.newLatLng(entry.getValue().getMarker().getPosition()), 250, null);
+			}
+		}
+	}
+
+	public boolean isMapLoaded() {
+		return isLoaded;
 	}
 }

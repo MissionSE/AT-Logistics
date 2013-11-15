@@ -4,10 +4,16 @@ import com.missionse.atlogistics.R;
 
 public enum ResourceType {
 
-	FOODWATER(R.drawable.ic_launcher, "Food/Water"), AMMO(R.drawable.ic_launcher, "Ammo"), CLOTHING(
-			R.drawable.ic_launcher, "Clothing"), FUEL(R.drawable.ic_launcher, "Fuel"), MEDICAL(R.drawable.ic_launcher,
-			"Medical"), VEHICLES(R.drawable.ic_launcher, "Vehicles"), PHOTO(R.drawable.ic_launcher, "Photo"), VIDEO(
-			R.drawable.ic_launcher, "Video"), WAYPOINTS(R.drawable.ic_launcher, "Waypoints"), ;
+	FOODWATER(R.drawable.food, "Food/Water"),
+	AMMO(R.drawable.ammo, "Ammo"),
+	CLOTHING(R.drawable.clothing, "Clothing"),
+	FUEL(R.drawable.fuel, "Fuel"),
+	MEDICAL(R.drawable.medical,"Medical"),
+	HELO(R.drawable.helos, "Helo"),
+	HELOLANDING(R.drawable.helo_landing, "Helo Landing"),
+	SHIP(R.drawable.ussgeorgewashington, "Ship"),
+	GROUND(R.drawable.ground_track, "Ground"),
+	WAYPOINTS(R.drawable.ic_launcher, "Waypoint");
 
 	private int resource;
 	private String text;
@@ -24,7 +30,7 @@ public enum ResourceType {
 	public String getDescription() {
 		return text;
 	}
-	
+
 	public static CharSequence[] valuesAsCharSequence() {
 		CharSequence[] value = new CharSequence[values().length];
 		ResourceType[] types = values();

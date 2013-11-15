@@ -1,12 +1,15 @@
 package com.missionse.atlogistics.maps;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import android.app.Fragment;
 import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.InflateException;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,11 +34,16 @@ import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.VisibleRegion;
 import com.missionse.atlogistics.R;
+import com.missionse.atlogistics.resources.Resource;
+import com.missionse.atlogistics.resources.ResourceChangeListener;
+import com.missionse.atlogistics.resources.ResourceManager;
+import com.missionse.atlogistics.resources.ResourceType;
 
 public class LeftMapsFragment extends Fragment implements ConnectionCallbacks, OnConnectionFailedListener,
-LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLongClickListener {
+		LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLongClickListener,
+		ResourceChangeListener {
 
-	private static final LatLng HOME = new LatLng(32.865240, -80.020439);
+	private static final LatLng HOME = new LatLng(11.05, 124.367);
 	private static final float HOME_BEARING = 27f;
 
 	private GoogleMap map;
@@ -45,11 +53,25 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 
 	private View view;
 
-	private static final LocationRequest REQUEST = LocationRequest.create().setInterval(5000)
-			.setFastestInterval(16) // 16ms = 60fps
+	private HashMap<Resource, ResourceMarker> markers;
+	private HashMap<ResourceType, Boolean> markerVisibilities;
+
+	private boolean isLoaded = false;
+
+	public LeftMapsFragment() {
+		markers = new HashMap<Resource, ResourceMarker>();
+		markerVisibilities = new HashMap<ResourceType, Boolean>();
+
+		for (ResourceType resourceType : ResourceType.values()) {
+			markerVisibilities.put(resourceType, Boolean.TRUE);
+		}
+	}
+
+	private static final LocationRequest REQUEST = LocationRequest.create().setInterval(5000).setFastestInterval(16) // 16ms = 60fps
 			.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
 	private DualMapContainer mapContainer;
+
 	public void setMapContainer(final DualMapContainer container) {
 		mapContainer = container;
 		mapContainer.setLeftMap(this);
@@ -117,16 +139,18 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 		super.onPause();
 		if (locationClient != null) {
 			locationClient.disconnect();
+			//map = null;
+			//zoomedViewPolygon = null;
 		}
 	}
 
 	private void setUpMapIfNeeded() {
-		if (map == null) {
+		//if (map == null) {
 			map = ((MapFragment) getFragmentManager().findFragmentById(R.id.map_left)).getMap();
 			if (map != null) {
 				setUpMap();
 			}
-		}
+		//}
 	}
 
 	private void setUpLocationClientIfNeeded() {
@@ -145,15 +169,20 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 		map.setOnMapLoadedCallback(new GoogleMap.OnMapLoadedCallback() {
 			@Override
 			public void onMapLoaded() {
-				map.animateCamera(CameraUpdateFactory
-						.newCameraPosition(new CameraPosition(HOME, 15f, 0, HOME_BEARING)));
+				if(isLoaded){
+					map.animateCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition(HOME, 5f, 0, HOME_BEARING)));
+				}else{
+					map.animateCamera(CameraUpdateFactory.newCameraPosition(new CameraPosition(HOME, 15f, 0, HOME_BEARING)));
+				}
+
+				isLoaded = true;
 			}
 		});
 
 		map.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
 			@Override
 			public void onMapClick(final LatLng latLng) {
-				if (mapContainer.getRightMap() != null) {
+				if (mapContainer.getRightMap() != null && mapContainer.getRight().isMapLoaded()) {
 					mapContainer.getRightMap().animateCamera(CameraUpdateFactory.newLatLng(latLng));
 					drawZoomedViewPolygon();
 				}
@@ -170,6 +199,10 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 				return false;
 			}
 		});
+
+		map.setInfoWindowAdapter(new CustomInfoWindowAdapter(getActivity(), markers));
+
+		ResourceManager.getInstance().addListener(this);
 	}
 
 	@Override
@@ -186,6 +219,7 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 		int strokeColor = Color.GRAY;
 
 		if (mapContainer.getRightMap() != null) {
+			Log.e("LeftMap", "Right Map is not null");
 			final VisibleRegion rightVR = mapContainer.getRightMap().getProjection().getVisibleRegion();
 			final List<LatLng> rightVRpoints = new ArrayList<LatLng>();
 			rightVRpoints.add(rightVR.farLeft);
@@ -194,17 +228,40 @@ LocationListener, OnMyLocationButtonClickListener, OnMapClickListener, OnMapLong
 			rightVRpoints.add(rightVR.nearLeft);
 
 			if (zoomedViewPolygon == null) {
-				zoomedViewPolygon = map.addPolygon(new PolygonOptions()
-				.addAll(rightVRpoints)
-				.fillColor(fillColor)
-				.strokeWidth(strokeWidth)
-				.strokeColor(strokeColor));
+				Log.e("LeftMap", "ZoomedViewPolygon is null");
+				zoomedViewPolygon = map.addPolygon(new PolygonOptions().addAll(rightVRpoints).fillColor(fillColor)
+						.strokeWidth(strokeWidth).strokeColor(strokeColor));
 			} else {
+				Log.e("LeftMap", "ZoomedViewPolygon is not null");
 				zoomedViewPolygon.setFillColor(fillColor);
 				zoomedViewPolygon.setStrokeWidth(strokeWidth);
 				zoomedViewPolygon.setPoints(rightVRpoints);
 				zoomedViewPolygon.setStrokeColor(strokeColor);
 			}
 		}
+	}
+
+	@Override
+	public void onResourcesChanged() {
+		markers.clear();
+		for (Resource resource : ResourceManager.getInstance().getResources()) {
+			ResourceMarker marker = new ResourceMarker(map, resource, getActivity());
+			markers.put(resource, marker);
+		}
+	}
+
+	public void setResourceVisibility(final ResourceType resourceType, final boolean isChecked) {
+		markerVisibilities.put(resourceType, Boolean.valueOf(isChecked));
+		for (Map.Entry<Resource, ResourceMarker> entry : markers.entrySet()) {
+			Resource r = entry.getKey();
+			ResourceMarker m = entry.getValue();
+			if (r.getType() == resourceType) {
+				m.setVisible(isChecked);
+			}
+		}
+	}
+
+	public boolean isMapLoaded() {
+		return isLoaded;
 	}
 }
